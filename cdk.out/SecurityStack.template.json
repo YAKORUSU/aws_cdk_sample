@@ -1,0 +1,300 @@
+{
+ "Resources": {
+  "AlbSg1155C1BE": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "ALB security group (HTTP)",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow HTTP",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "VpcStack:ExportsOutputRefMyVpcF9F0CA6FBC8737E9"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/AlbSg/Resource"
+   }
+  },
+  "EcsSg17B4B0B3": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "ECS tasks security group",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "VpcStack:ExportsOutputRefMyVpcF9F0CA6FBC8737E9"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/EcsSg/Resource"
+   }
+  },
+  "EcsSgfromSecurityStackAlbSg848EA823803570DB0F": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow ALB -> ECS",
+    "FromPort": 80,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "EcsSg17B4B0B3",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AlbSg1155C1BE",
+      "GroupId"
+     ]
+    },
+    "ToPort": 80
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/EcsSg/from SecurityStackAlbSg848EA823:80"
+   }
+  },
+  "RdsSg7F9F43B6": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "RDS security group",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "VpcStack:ExportsOutputRefMyVpcF9F0CA6FBC8737E9"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/RdsSg/Resource"
+   }
+  },
+  "RdsSgfromSecurityStackEcsSgC0494B043306DC781192": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow ECS -> RDS (MySQL)",
+    "FromPort": 3306,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "RdsSg7F9F43B6",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "EcsSg17B4B0B3",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3306
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/RdsSg/from SecurityStackEcsSgC0494B04:3306"
+   }
+  },
+  "EcsTaskRole8DFA0181": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "Task role for ECS tasks (app role)"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/EcsTaskRole/Resource"
+   }
+  },
+  "EcsTaskRoleDefaultPolicy50882C77": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:s3:::your-bucket-name",
+        "arn:aws:s3:::your-bucket-name/*"
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "EcsTaskRoleDefaultPolicy50882C77",
+    "Roles": [
+     {
+      "Ref": "EcsTaskRole8DFA0181"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/EcsTaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "EcsExecutionRoleFD93B7A2": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/EcsExecutionRole/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/7WTzU/DIBjG/xY5Gla1Gg+9VWPMTpq6m1kMwrvJRqHysaVp+N+Fln2YGi+6E+F5Xn48vECe5VfX2eUZ2ZoJZeuJ4O9Z92IJXeMgvXVA8zAH6jS37aNWrnnt0KahqEDnCCMGhmreWK5kUogQalsK8eTsu3KSocJqBx53iDA2lUsNxlROACoCiBI5lYJLGJRYiRFVUgKNSJOYTvJPB1PWTwPK4zDOT8DECyIM7MgPx+DopqKI7Gv+qQ8H9M9nOtr6kO8Ee8/x/UJ+u+uRkBZ7zEmddZUSEDpOjHE1sLsWFR1qNJeUN0SUlIa97S5SXxMXlHSf1I/Dp5Az9awEp228UT8/iDv4yLXhyX4M97739g391fxD+JpIsgTWMzmY/vkda22pU21qbkTgwRo6n7LNVHRGkccyY+FvWqhBWpNO34MHpve4AqOcptDj47LohnfQOOuxVAyylbnY5DfZbfj0K8P5RIdz8hqyahi/AMprXHMRBAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SecurityStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "EcsTaskRoleArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "EcsTaskRole8DFA0181",
+     "Arn"
+    ]
+   }
+  },
+  "ExportsOutputFnGetAttRdsSg7F9F43B6GroupId133E31A8": {
+   "Value": {
+    "Fn::GetAtt": [
+     "RdsSg7F9F43B6",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "SecurityStack:ExportsOutputFnGetAttRdsSg7F9F43B6GroupId133E31A8"
+   }
+  },
+  "ExportsOutputFnGetAttEcsTaskRole8DFA0181Arn43EC6E0B": {
+   "Value": {
+    "Fn::GetAtt": [
+     "EcsTaskRole8DFA0181",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "SecurityStack:ExportsOutputFnGetAttEcsTaskRole8DFA0181Arn43EC6E0B"
+   }
+  },
+  "ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E": {
+   "Value": {
+    "Fn::GetAtt": [
+     "EcsSg17B4B0B3",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "SecurityStack:ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E"
+   }
+  },
+  "ExportsOutputFnGetAttAlbSg1155C1BEGroupIdF2A72E65": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AlbSg1155C1BE",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "SecurityStack:ExportsOutputFnGetAttAlbSg1155C1BEGroupIdF2A72E65"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

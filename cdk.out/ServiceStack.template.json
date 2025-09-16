@@ -1,0 +1,469 @@
+{
+ "Resources": {
+  "EcsCluster97242B84": {
+   "Type": "AWS::ECS::Cluster",
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/EcsCluster/Resource"
+   }
+  },
+  "ExecutionRole605A040B": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/ExecutionRole/Resource"
+   }
+  },
+  "ExecutionRoleDefaultPolicyA5B92313": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "AppLogGroup7D8CD952",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ExecutionRoleDefaultPolicyA5B92313",
+    "Roles": [
+     {
+      "Ref": "ExecutionRole605A040B"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "TaskDef54694570": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Essential": true,
+      "Image": "nginx:latest",
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "AppLogGroup7D8CD952"
+        },
+        "awslogs-stream-prefix": "app",
+        "awslogs-region": "ap-northeast-1"
+       }
+      },
+      "Name": "AppContainer",
+      "PortMappings": [
+       {
+        "ContainerPort": 80,
+        "Protocol": "tcp"
+       }
+      ]
+     }
+    ],
+    "Cpu": "256",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "ExecutionRole605A040B",
+      "Arn"
+     ]
+    },
+    "Family": "ServiceStackTaskDefFD38CFA7",
+    "Memory": "512",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "TaskRoleArn": {
+     "Fn::ImportValue": "SecurityStack:ExportsOutputFnGetAttEcsTaskRole8DFA0181Arn43EC6E0B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/TaskDef/Resource"
+   }
+  },
+  "AppLogGroup7D8CD952": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/AppLogGroup/Resource"
+   }
+  },
+  "FargateServiceAC2B3B85": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Ref": "EcsCluster97242B84"
+    },
+    "DeploymentConfiguration": {
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 50
+    },
+    "DesiredCount": 2,
+    "EnableECSManagedTags": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LaunchType": "FARGATE",
+    "LoadBalancers": [
+     {
+      "ContainerName": "AppContainer",
+      "ContainerPort": 80,
+      "TargetGroupArn": {
+       "Ref": "AppTG218EBF05"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::ImportValue": "SecurityStack:ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E"
+       }
+      ],
+      "Subnets": [
+       {
+        "Fn::ImportValue": "VpcStack:ExportsOutputRefPrivateSubnetASubnet0C8C29C18A1DB0CD"
+       },
+       {
+        "Fn::ImportValue": "VpcStack:ExportsOutputRefPrivateSubnetCSubnet439D5A9F2269D6CA"
+       }
+      ]
+     }
+    },
+    "TaskDefinition": {
+     "Ref": "TaskDef54694570"
+    }
+   },
+   "DependsOn": [
+    "AppALBHttpListener82C680E9"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/FargateService/Service"
+   }
+  },
+  "FargateServiceTaskCountTarget8CF96FEA": {
+   "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+   "Properties": {
+    "MaxCapacity": 6,
+    "MinCapacity": 2,
+    "ResourceId": {
+     "Fn::Join": [
+      "",
+      [
+       "service/",
+       {
+        "Ref": "EcsCluster97242B84"
+       },
+       "/",
+       {
+        "Fn::GetAtt": [
+         "FargateServiceAC2B3B85",
+         "Name"
+        ]
+       }
+      ]
+     ]
+    },
+    "RoleARN": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:iam::",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+      ]
+     ]
+    },
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "ServiceNamespace": "ecs"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/FargateService/TaskCount/Target/Resource"
+   }
+  },
+  "FargateServiceTaskCountTargetCpuScaling086750CA": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "ServiceStackFargateServiceTaskCountTargetCpuScalingD7418F79",
+    "PolicyType": "TargetTrackingScaling",
+    "ScalingTargetId": {
+     "Ref": "FargateServiceTaskCountTarget8CF96FEA"
+    },
+    "TargetTrackingScalingPolicyConfiguration": {
+     "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+     },
+     "ScaleInCooldown": 60,
+     "ScaleOutCooldown": 60,
+     "TargetValue": 70
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/FargateService/TaskCount/Target/CpuScaling/Resource"
+   }
+  },
+  "FargateServiceTaskCountTargetPendingTasksScalingUpperPolicy65BAF141": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "ServiceStackFargateServiceTaskCountTargetPendingTasksScalingUpperPolicy20F1FCD7",
+    "PolicyType": "StepScaling",
+    "ScalingTargetId": {
+     "Ref": "FargateServiceTaskCountTarget8CF96FEA"
+    },
+    "StepScalingPolicyConfiguration": {
+     "AdjustmentType": "ChangeInCapacity",
+     "MetricAggregationType": "Average",
+     "StepAdjustments": [
+      {
+       "MetricIntervalLowerBound": 0,
+       "ScalingAdjustment": 1
+      }
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/FargateService/TaskCount/Target/PendingTasksScaling/UpperPolicy/Resource"
+   }
+  },
+  "FargateServiceTaskCountTargetPendingTasksScalingUpperAlarm84C19AF1": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "FargateServiceTaskCountTargetPendingTasksScalingUpperPolicy65BAF141"
+     }
+    ],
+    "AlarmDescription": "Upper threshold scaling alarm",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "ClusterName",
+      "Value": {
+       "Ref": "EcsCluster97242B84"
+      }
+     },
+     {
+      "Name": "ServiceName",
+      "Value": {
+       "Fn::GetAtt": [
+        "FargateServiceAC2B3B85",
+        "Name"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "PendingTaskCount",
+    "Namespace": "AWS/ECS",
+    "Period": 60,
+    "Statistic": "Average",
+    "Threshold": 1
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/FargateService/TaskCount/Target/PendingTasksScaling/UpperAlarm/Resource"
+   }
+  },
+  "AppALBDBE7026A": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     }
+    ],
+    "Scheme": "internet-facing",
+    "SecurityGroups": [
+     {
+      "Fn::ImportValue": "SecurityStack:ExportsOutputFnGetAttAlbSg1155C1BEGroupIdF2A72E65"
+     }
+    ],
+    "Subnets": [
+     {
+      "Fn::ImportValue": "VpcStack:ExportsOutputRefPublicSubnetASubnet3D1343B61C9C52D5"
+     },
+     {
+      "Fn::ImportValue": "VpcStack:ExportsOutputRefPublicSubnetCSubnet175E3284C0A9E25D"
+     }
+    ],
+    "Type": "application"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/AppALB/Resource"
+   }
+  },
+  "AppALBHttpListener82C680E9": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "AppTG218EBF05"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "AppALBDBE7026A"
+    },
+    "Port": 80,
+    "Protocol": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/AppALB/HttpListener/Resource"
+   }
+  },
+  "AppTG218EBF05": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 30,
+    "HealthCheckPath": "/healthcheck",
+    "HealthCheckTimeoutSeconds": 5,
+    "Matcher": {
+     "HttpCode": "200"
+    },
+    "Port": 80,
+    "Protocol": "HTTP",
+    "TargetGroupAttributes": [
+     {
+      "Key": "stickiness.enabled",
+      "Value": "false"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": {
+     "Fn::ImportValue": "VpcStack:ExportsOutputRefMyVpcF9F0CA6FBC8737E9"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/AppTG/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31U224TMRD9FvYRuQsEBFLf0lSgSIVWTcRLVKGpPd249dor25sQrfbfGd+yKYU+RBvPnLmfmVk9+/Cxfv8G9u6Mi6czJe/rYeWBPzES/RqQu3pYqN55tJuh2nW8Oq/eVuMdWzzoLGdfwTbgcQ3u6RIfpJZeGr0hGPvrF62ew9jCaA9Soz2RZYcrtDvJcVMs85utOCi4VzHgwvTaj0xCWw+3RiElCc71LYqLQ3U+VJ2VmssO1JzzAI3ps4wJBnMeQqaqWNWChgbFjVGSS3TVOfk7lR3mNmPvRkahhFibmxIiIYJN1npq5HapFZV31IViXlfGWkNqLMljJ4vB2gTNCz8vxULQGD22qL3LKUXHyefIlGlotFem+WZN31GZFj1hYy++MHq1ZjeVVAl03ppDnnwxGxl0HSEg2EHvjaPRSN0Qh44zsg16cu/S8H5Ai64DTrlWRC4ahcvIS0m5ujKLkIEzveW4FEUQK4x/W6kXQF6kPxQJ/H4mCT0InnFt1pbo/B29lTw1iAVaoAh8Q1EU0UsXyw05ZoGQLuQWqsFlyczHmn6C6gvMJf3CGCXM/pQhUXOt/wrf5udQ7cFqapgrBMwNXHnsEvv6rkObw/At6AaP9Smz/6fqjvgtHmk3w/DXhy6IF1G/nNpW+PB8UCx9YstCGimbxIKCngQhy/9K0mKNjCvTiz14vq2HuQLbbl6rHwLiEh23svMTGbhpO7DSGX1N7QBvSt1IJO0j/W7QSiNcGRx46Iwk8q9NjFpmtyVebWlMxy7SpkRAOQTTqkTxyFCB85LKAHFP6dGu62Y3o2Im6l+R7iLq6EyeHrtTBTs1kHQ59QSeDLLiFJxmEhcuHdDjcxzZbV6TY9iRaSOwfnTvdrNP9Wc67o9OyjNLx482rL5N3z++YTnE+QUAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "ServiceStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ExportsOutputRefEcsCluster97242B84553A5D8F": {
+   "Value": {
+    "Ref": "EcsCluster97242B84"
+   },
+   "Export": {
+    "Name": "ServiceStack:ExportsOutputRefEcsCluster97242B84553A5D8F"
+   }
+  },
+  "ExportsOutputFnGetAttFargateServiceAC2B3B85NameFCF2B9A2": {
+   "Value": {
+    "Fn::GetAtt": [
+     "FargateServiceAC2B3B85",
+     "Name"
+    ]
+   },
+   "Export": {
+    "Name": "ServiceStack:ExportsOutputFnGetAttFargateServiceAC2B3B85NameFCF2B9A2"
+   }
+  },
+  "ExportsOutputRefAppALBHttpListener82C680E91A33606C": {
+   "Value": {
+    "Ref": "AppALBHttpListener82C680E9"
+   },
+   "Export": {
+    "Name": "ServiceStack:ExportsOutputRefAppALBHttpListener82C680E91A33606C"
+   }
+  },
+  "ExportsOutputFnGetAttAppTG218EBF05TargetGroupFullName4F43E5AC": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AppTG218EBF05",
+     "TargetGroupFullName"
+    ]
+   },
+   "Export": {
+    "Name": "ServiceStack:ExportsOutputFnGetAttAppTG218EBF05TargetGroupFullName4F43E5AC"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

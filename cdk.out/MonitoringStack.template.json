@@ -1,0 +1,236 @@
+{
+ "Resources": {
+  "AlarmTopicD01E77F9": {
+   "Type": "AWS::SNS::Topic",
+   "Metadata": {
+    "aws:cdk:path": "MonitoringStack/AlarmTopic/Resource"
+   }
+  },
+  "EcsCpuAlarm1D439C07": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "AlarmTopicD01E77F9"
+     }
+    ],
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "ClusterName",
+      "Value": {
+       "Fn::ImportValue": "ServiceStack:ExportsOutputRefEcsCluster97242B84553A5D8F"
+      }
+     },
+     {
+      "Name": "ServiceName",
+      "Value": {
+       "Fn::ImportValue": "ServiceStack:ExportsOutputFnGetAttFargateServiceAC2B3B85NameFCF2B9A2"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "CPUUtilization",
+    "Namespace": "AWS/ECS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Threshold": 80,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "MonitoringStack/EcsCpuAlarm/Resource"
+   }
+  },
+  "EcsPendingAlarm54523054": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "AlarmTopicD01E77F9"
+     }
+    ],
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "ClusterName",
+      "Value": {
+       "Fn::ImportValue": "ServiceStack:ExportsOutputRefEcsCluster97242B84553A5D8F"
+      }
+     },
+     {
+      "Name": "ServiceName",
+      "Value": {
+       "Fn::ImportValue": "ServiceStack:ExportsOutputFnGetAttFargateServiceAC2B3B85NameFCF2B9A2"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "PendingTaskCount",
+    "Namespace": "AWS/ECS",
+    "Period": 60,
+    "Statistic": "Average",
+    "Threshold": 1
+   },
+   "Metadata": {
+    "aws:cdk:path": "MonitoringStack/EcsPendingAlarm/Resource"
+   }
+  },
+  "Alb5xxAlarm99BFF946": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "AlarmTopicD01E77F9"
+     }
+    ],
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "LoadBalancer",
+      "Value": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Select": [
+           1,
+           {
+            "Fn::Split": [
+             "/",
+             {
+              "Fn::ImportValue": "ServiceStack:ExportsOutputRefAppALBHttpListener82C680E91A33606C"
+             }
+            ]
+           }
+          ]
+         },
+         "/",
+         {
+          "Fn::Select": [
+           2,
+           {
+            "Fn::Split": [
+             "/",
+             {
+              "Fn::ImportValue": "ServiceStack:ExportsOutputRefAppALBHttpListener82C680E91A33606C"
+             }
+            ]
+           }
+          ]
+         },
+         "/",
+         {
+          "Fn::Select": [
+           3,
+           {
+            "Fn::Split": [
+             "/",
+             {
+              "Fn::ImportValue": "ServiceStack:ExportsOutputRefAppALBHttpListener82C680E91A33606C"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       ]
+      }
+     },
+     {
+      "Name": "TargetGroup",
+      "Value": {
+       "Fn::ImportValue": "ServiceStack:ExportsOutputFnGetAttAppTG218EBF05TargetGroupFullName4F43E5AC"
+      }
+     }
+    ],
+    "EvaluationPeriods": 5,
+    "MetricName": "HTTPCode_Target_5XX_Count",
+    "Namespace": "AWS/ApplicationELB",
+    "Period": 60,
+    "Statistic": "Sum",
+    "Threshold": 5
+   },
+   "Metadata": {
+    "aws:cdk:path": "MonitoringStack/Alb5xxAlarm/Resource"
+   }
+  },
+  "RdsStorageAlarm879B47F1": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "AlarmTopicD01E77F9"
+     }
+    ],
+    "ComparisonOperator": "LessThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "DBInstanceIdentifier",
+      "Value": {
+       "Fn::ImportValue": "RdsStack:ExportsOutputRefAppRdsE6D3399A2CC540F6"
+      }
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "FreeStorageSpace",
+    "Namespace": "AWS/RDS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Threshold": 4294967296
+   },
+   "Metadata": {
+    "aws:cdk:path": "MonitoringStack/RdsStorageAlarm/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/+2SsU7EMAyGn4WMKA1HQQzdDm5Fh4CtOiGTBOq7NKli9zpEeXfScK/AxmT7s+z/H/5Wtbd3anMFCzXanBqHnyq9MeiTLOgjkSeV3sOEuhfX4iCfvnydstQuzGYB1oNKWwdx7JMYLUfUoktigejRf5PoylmWgodoaQjOVCCFPYObgTH4FxsxGLpwHcYJIlLw+8lG4BAvC44W+BmJytcdMBTsAz8WqoeCikYSYEx1stXrY9H1KR9W/me2/kVzjUTFOa/tfuZp5ix9MFYd6ebc3quHErAjITZx9oyjVa+/9QfMaeZffQIAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "MonitoringStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "AlarmTopicArn": {
+   "Value": {
+    "Ref": "AlarmTopicD01E77F9"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

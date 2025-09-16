@@ -1,0 +1,21 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "42360f7247768d41ad68271e9dcdaade74a0dc152a53466c5a120f1592bb60bf": {
+      "displayName": "SecurityStack Template",
+      "source": {
+        "path": "SecurityStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-ap-northeast-1-75d67132": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-ap-northeast-1",
+          "objectKey": "42360f7247768d41ad68271e9dcdaade74a0dc152a53466c5a120f1592bb60bf.json",
+          "region": "ap-northeast-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-ap-northeast-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

@@ -1,0 +1,173 @@
+{
+ "Resources": {
+  "RdsSecretB2B964C3": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "GenerateStringKey": "password",
+     "IncludeSpace": false,
+     "SecretStringTemplate": "{\"username\":\"dbadmin\"}"
+    },
+    "Name": "RdsStack-db-credentials"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "RdsStack/RdsSecret/Resource"
+   }
+  },
+  "RdsSecretAttachmentDFF91DCD": {
+   "Type": "AWS::SecretsManager::SecretTargetAttachment",
+   "Properties": {
+    "SecretId": {
+     "Ref": "RdsSecretB2B964C3"
+    },
+    "TargetId": {
+     "Ref": "AppRdsE6D3399A"
+    },
+    "TargetType": "AWS::RDS::DBInstance"
+   },
+   "Metadata": {
+    "aws:cdk:path": "RdsStack/RdsSecret/Attachment/Resource"
+   }
+  },
+  "RdsSubnetGroup": {
+   "Type": "AWS::RDS::DBSubnetGroup",
+   "Properties": {
+    "DBSubnetGroupDescription": "Subnet group for RDS",
+    "SubnetIds": [
+     {
+      "Fn::ImportValue": "VpcStack:ExportsOutputRefPrivateSubnetASubnet0C8C29C18A1DB0CD"
+     },
+     {
+      "Fn::ImportValue": "VpcStack:ExportsOutputRefPrivateSubnetCSubnet439D5A9F2269D6CA"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "RdsStack/RdsSubnetGroup/Default"
+   }
+  },
+  "AppRdsE6D3399A": {
+   "Type": "AWS::RDS::DBInstance",
+   "Properties": {
+    "AllocatedStorage": "20",
+    "BackupRetentionPeriod": 7,
+    "CopyTagsToSnapshot": true,
+    "DBInstanceClass": "db.m5.large",
+    "DBSubnetGroupName": {
+     "Ref": "RdsSubnetGroup"
+    },
+    "DeletionProtection": false,
+    "Engine": "mysql",
+    "EngineVersion": "8.0.33",
+    "MasterUserPassword": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "RdsSecretB2B964C3"
+       },
+       ":SecretString:password::}}"
+      ]
+     ]
+    },
+    "MasterUsername": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "RdsSecretB2B964C3"
+       },
+       ":SecretString:username::}}"
+      ]
+     ]
+    },
+    "MultiAZ": true,
+    "PubliclyAccessible": false,
+    "StorageType": "gp3",
+    "VPCSecurityGroups": [
+     {
+      "Fn::ImportValue": "SecurityStack:ExportsOutputFnGetAttRdsSg7F9F43B6GroupId133E31A8"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "RdsStack/AppRds/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/5VTUY/TMAz+LeTx1BXYIR72tuMEQkgwdYOX03RyU69klyZR4gzK1P+Ol7SsxwviqbE/258/212Wy9e35asX8CMsZPO00Kouz1sC+VSw6/EcUHqk0IGBFj1DyX44iwx8hg7FStyIQrRo0ANhjtiSV6YVqykw2zvsnOaYMQV/Sh0b3EQjKQIpa8SKfMRCKJOQrQPJwQfQAWcMqdYn7FOZYdgX7w4m0xb5swPfIq2JdXzv0Fz7HYkp4Tl9lv132lD4JrDmWBukD95Gx4VOTo5V+JWhkHROz4cE3oj9UIgGg/TKZWnJ77GzJ9Abq5W8COAI8rYf+7i/m5EV90BQQ8CPJhAYicyOplUGL3z5tevdNM3AQ9H4NaCvLKVprp1jFpix56Rv6EPyncUhav3HTCEdHK2fu1iGA8+LJvSpr/fQKd0/q/jMFaJz1lOoEJoKUwt3fFDRhbzeofi/IfLqolfUJ/IR2xeCN9bwkhQfx1gLtLYsF5stWc/3OvWTrXFUrbu9qIya1PrXdG/hOvUxycWaG9f9WkoMQdX6eod1ElPxPMxstA1qvJgbbwllBsaEf+182u8wXOwvkVzk2zO2wfIYXp6Wb8q3/Iseg1ILH5mzw7LK398lrBcWvwMAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "RdsStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "RdsEndpoint": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AppRdsE6D3399A",
+     "Endpoint.Address"
+    ]
+   }
+  },
+  "RdsSecretArn": {
+   "Value": {
+    "Ref": "RdsSecretB2B964C3"
+   }
+  },
+  "ExportsOutputRefAppRdsE6D3399A2CC540F6": {
+   "Value": {
+    "Ref": "AppRdsE6D3399A"
+   },
+   "Export": {
+    "Name": "RdsStack:ExportsOutputRefAppRdsE6D3399A2CC540F6"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

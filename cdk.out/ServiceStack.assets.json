@@ -1,0 +1,21 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "0d461e30171c0fe07a964dde2800962239cded0391b05514e95025be8a20866d": {
+      "displayName": "ServiceStack Template",
+      "source": {
+        "path": "ServiceStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-ap-northeast-1-8d78e9dd": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-ap-northeast-1",
+          "objectKey": "0d461e30171c0fe07a964dde2800962239cded0391b05514e95025be8a20866d.json",
+          "region": "ap-northeast-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-ap-northeast-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}
